@@ -1,4 +1,4 @@
-The dataset has the mean of the following variables for each subject:
+The dataset has the mean of the following variables for each subject. Returned are the mean meadurement of the following variables:
 
 "activity"
 "subject"
@@ -68,6 +68,8 @@ The dataset has the mean of the following variables for each subject:
 "fBodyBodyAccJerkMagstd"
 "fBodyBodyGyroMagstd"
 "fBodyBodyGyroJerkMagstd"
+
+
 
 This is catogerized per activitey:
 "WALKING"
