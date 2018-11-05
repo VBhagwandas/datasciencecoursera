@@ -1,0 +1,46 @@
+install.packages("devtools")
+devtools::install_github("jhudsl/collegeIncome")
+library(collegeIncome)
+data(college)
+
+devtools::install_github("jhudsl/matahari")
+library(matahari)
+
+dance_start(value = FALSE, contents = FALSE)
+
+# agg_mean <- aggregate(major_category ~ p25th + median + p75th, data=college, mean)
+
+agg_mean <- aggregate(cbind(p25th, median, p75th) ~ major_category, data=college, mean)
+agg_sd <- aggregate(cbind(p25th, median, p75th) ~ major_category, data=college, sd)
+
+library(ggplot2)
+g_med = ggplot(college, aes(x=major_category, y=median, group=major_category)) + 
+  geom_boxplot(aes(color = major_category))
+
+g_p25 = ggplot(college, aes(x=major_category, y=p25th, group=major_category)) + 
+  geom_boxplot(aes(color = major_category))
+
+g_p75 = ggplot(college, aes(x=major_category, y=p75th, group=major_category)) + 
+  geom_boxplot(aes(color = major_category))
+
+print(g_med)
+print(g_p25)
+print(g_p75)
+
+max_med <- college[which.max(college[,9]),4]
+max_p25 <- college[which.max(college[,8]),4]
+max_p75 <- college[which.max(college[,10]),4]
+
+max_agg_med <- agg_mean[which.max(agg_mean[,3]),1]
+max_agg_p25 <- agg_mean[which.max(agg_mean[,2]),1]
+max_agg_p75 <- agg_mean[which.max(agg_mean[,4]),1]
+
+max_agg_med_sd <- agg_sd[which.max(agg_sd[,3]),1]
+max_agg_p25_sd <- agg_sd[which.max(agg_sd[,2]),1]
+max_agg_p75_sd <- agg_sd[which.max(agg_sd[,4]),1]
+
+min_med <- college[which.min(college[,9]),4]
+min_p25 <- college[which.min(college[,8]),4]
+min_p75 <- college[which.min(college[,10]),4]
+
+dance_save("~/Desktop/college_major_analysis.rds")
