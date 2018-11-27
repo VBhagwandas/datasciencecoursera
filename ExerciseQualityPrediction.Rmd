@@ -1,0 +1,145 @@
+---
+title: "Predicting the Quality of Exercises with measured data"
+author: "VBhagwandas"
+date: "27 november 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Summary
+In this study we examine data from accelerometers on the belt, forearm, arm, and dumbell to precict how well the exercises are perfomed. It shows that the Random Forest model is the best approach as those accurracies are the highest.
+
+## Introduction
+For the course project we want to predict how good people are doing exercises. The movements are measured with accelerometers on the belt, forearm, arm, and dumbell to predict the classes. The classes are how well someone is doing the exircise. This is described in the literature [1] and [2]. In this analysis we will check whether the metod to fit the data used in the previous studies are also the best for this study and then we will ude the model to precict the classes. 
+
+## Data Preparation
+First we download the data from the internet and then we load it into a data frame:
+
+```{r}
+rm(list=ls())
+fileUrl1 <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+download.file(fileUrl1, destfile="pml-training.csv")
+
+fileUrl2 <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+download.file(fileUrl2, destfile="pml-testing.csv")
+
+pml_training <- read.csv("pml-training.csv")
+pml_testing <- read.csv("pml-testing.csv")
+```
+
+This data contains a traing data and a testing data. However the testing data should be used to predict the values. For this we take the following Cross-Validation appproach:
+- Use the training set
+- Split it into training/test sets
+- Built a model on the training set
+- Evaluate on the test set
+- Repeat and average the estimated errors.
+
+```{r}
+library(ggplot2)
+library(caret)
+library(randomForest)
+library(gbm)
+library(rpart)
+
+inTrain = createDataPartition(pml_training$classe, p = 3/4)[[1]]
+training = pml_training[ inTrain,]
+testing = pml_training[-inTrain,]
+```
+
+## Data Extrapolation
+All the extrapolation will be done on the training set. We will first check some properties of the training set:
+
+```{r}
+names(sstraining)
+str(sstraining)
+class(sstraining$classe)
+```
+
+The goal is to predict the manner in which the subjects did the exercise. There are  different manners, represented by the classes. The data is measured with accelerometers on the belt, forearm, arm, and dumbell to predict the classes. Therefore the traing set will be subset with only the acceleration variable:
+
+```{r}
+sstraining <- subset(training, select = c(grep("^acc|classe", names(training))))
+sstesting <- subset(testing, select = c(grep("^acc|classe", names(testing))))
+```
+
+In addition we also subset the testing partition for prediction purposes.
+
+The number of NA's in the training subset are:
+
+```{r}
+sum(is.na(sstraining))
+```
+
+So we do not need to worry about NA's.
+
+At this stage is will also be wise to subset the validation data (pml_testing) for validation purposes:
+
+```{r}
+ssvalidation <- subset(pml_testing, select = c(grep("^acc", names(pml_testing))))
+```
+
+Note that this data set does not contain classe as that is what we want to predict.
+
+## Modeling
+According to [1][2] the best way to model this data is, because of the characteristic noise in the sensor data, to use a Random Forest approach. We will fit different models and compare them with the Random Forest. We will test which one has the best accuracy and check if this claim is also valid for us. The models in which the Random Forest model will be checked against are rpart, lda and a stackted model of Random Forest, rpart an lda in R.
+
+We fit the different models as:
+
+```{r}
+fit.rpart <- train(classe ~ ., method="rpart", data=sstraining)
+fit.rf <- randomForest(classe ~ ., data=sstraining)
+fit.lda <- train(classe ~ ., method="lda", data=sstraining)
+```
+
+To check the accuracy we need to predict the classe and compare to the testing data subset: 
+
+```{r}
+pred.rpart <- predict(fit.rpart,sstesting)
+pred.rf <- predict(fit.rf,sstesting)
+pred.lda <- predict(fit.lda,sstesting)
+```
+
+Tho combine the models we need tho combine the predictors in a data frame:
+
+```{r}
+predDF <- data.frame(pred.rpart, pred.rf, pred.lda, classe=sstesting$classe)
+
+combMod <- train(classe ~ ., method="rf", data=predDF)
+combPred <- predict(combMod, predDF)
+
+combMod2 <- train(classe ~ ., method="gam", data=predDF)
+combPred2 <- predict(combMod2, predDF)
+```
+
+The accuracies are: 
+```{r}
+cbind(rpart = confusionMatrix(pred.rpart, sstesting$classe)$overall[1],
+           rf = confusionMatrix(pred.rf, sstesting$classe)$overall[1],
+           lda = confusionMatrix(pred.lda, sstesting$classe)$overall[1],
+           comb_w_rf = confusionMatrix(combPred, sstesting$classe)$overall[1],
+           comb_with_gam = confusionMatrix(combPred2, sstesting$classe)$overall[1])
+```
+
+According to the accuracies it is safe to say that the Random Forest has the best accuracy. Therefore this will be used for further analysis.
+
+## Results
+The When we use the Random Forest method and fill in the validation data to predict the classes we get:
+
+```{r}
+predict(fit.rf,ssvalidation)
+```
+
+## Conclusion
+In conclusion we can say that we can predict accuratly the classe based on the measurements of accelerometers on the belt, forearm, arm, and dumbell.
+
+## References
+[1] Ugulino, W.; Cardador, D.; Vega, K.; Velloso, E.; Milidiu, R.; Fuks, H. Wearable Computing: Accelerometers' Data Classification of Body Postures and Movements. Proceedings of 21st Brazilian Symposium on Artificial Intelligence. Advances in Artificial Intelligence - SBIA 2012. In: Lecture Notes in Computer Science. , pp. 52-61. Curitiba, PR: Springer Berlin / Heidelberg, 2012. ISBN 978-3-642-34458-9. DOI: 10.1007/978-3-642-34459-6_6. 
+
+Read more: http://groupware.les.inf.puc-rio.br/har#ixzz5Y65RRnYi
+
+[2] Velloso, E.; Bulling, A.; Gellersen, H.; Ugulino, W.; Fuks, H. Qualitative Activity Recognition of Weight Lifting Exercises. Proceedings of 4th International Conference in Cooperation with SIGCHI (Augmented Human '13) . Stuttgart, Germany: ACM SIGCHI, 2013.
+
+Read more: http://groupware.les.inf.puc-rio.br/har#ixzz5Y64zWvt9
