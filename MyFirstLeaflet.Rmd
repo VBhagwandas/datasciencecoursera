@@ -1,0 +1,23 @@
+---
+title: "My First Leaflet"
+author: "VBhagwandas"
+date: "28 november 2018"
+output: html_document
+---
+
+```{r, eval=FALSE}
+library(leaflet)
+content <- paste(sep = "<br/>",
+  "<b><a href='http://www.imagingandarts.com/gallery/dutch-parliament/'>Ridderzaal (Hall of Knights), parliament of the Netherlands</a></b>",
+  "Visit website for photo's",
+  "The Hague",
+  "The Netherlands"
+)
+my_map <- leaflet() %>% 
+  addTiles() %>%
+  addCircleMarkers(lat=52.0797, lng=4.3134, 
+             popup=content)
+my_map
+```
+
+
